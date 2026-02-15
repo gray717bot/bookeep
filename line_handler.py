@@ -31,56 +31,78 @@ class LineHandler:
     @staticmethod
     def get_flex_message(record):
         """
-        將記帳紀錄轉換為漂亮的 Flex Message
+        將記帳紀錄轉換為超可愛的 Flex Message
         """
         category = record.get('category', '未分類')
         amount = str(record.get('amount', 0))
         note = record.get('note', '')
         date = record.get('date', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
+        # 根據金額給予不同的小評價 (讓它更有趣)
+        comment = "省錢小達人！✨" if int(amount) < 100 else "花錢有理，記帳萬歲！🎈"
+
         bubble = BubbleContainer(
             direction='ltr',
             header=BoxComponent(
                 layout='vertical',
-                background_color='#1DB446',
+                background_color='#FFB2B2',  # 奶油粉紅色
+                padding_all='20px',
                 contents=[
-                    TextComponent(text='記帳成功', weight='bold', size='lg', color='#ffffff', align='center')
+                    TextComponent(text='🌸 記帳漂亮成功 🌸', weight='bold', size='md', color='#ffffff', align='center')
                 ]
             ),
             body=BoxComponent(
                 layout='vertical',
+                padding_all='20px',
                 contents=[
-                    TextComponent(text=f'NT$ {amount}', weight='bold', size='xxl', margin='md', align='center'),
-                    SeparatorComponent(margin='md'),
+                    # 大大圓圓的金額顯示
                     BoxComponent(
                         layout='vertical',
-                        margin='md',
-                        spacing='sm',
+                        background_color='#FFF0F0',
+                        border_radius='20px',
+                        padding_all='15px',
+                        contents=[
+                            TextComponent(text=f'NT$ {amount}', weight='bold', size='xxl', color='#FF6B6B', align='center'),
+                            TextComponent(text=comment, size='xs', color='#FFAAAA', align='center', margin='sm')
+                        ]
+                    ),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='xl',
+                        spacing='md',
                         contents=[
                             BoxComponent(
                                 layout='horizontal',
                                 contents=[
-                                    TextComponent(text='類別', size='sm', color='#555555', flex=1),
-                                    TextComponent(text=category, size='sm', color='#111111', align='end', flex=4)
+                                    TextComponent(text='🐾 類別', size='sm', color='#888888', flex=1),
+                                    TextComponent(text=category, size='sm', color='#555555', align='end', flex=4, weight='bold')
                                 ]
                             ),
                             BoxComponent(
                                 layout='horizontal',
                                 contents=[
-                                    TextComponent(text='備註', size='sm', color='#555555', flex=1),
-                                    TextComponent(text=note if note else '-', size='sm', color='#111111', align='end', flex=4)
+                                    TextComponent(text='📝 備註', size='sm', color='#888888', flex=1),
+                                    TextComponent(text=note if note else '無', size='sm', color='#555555', align='end', flex=4)
                                 ]
                             ),
+                            SeparatorComponent(margin='md', color='#FFEEEE'),
                             BoxComponent(
                                 layout='horizontal',
+                                margin='md',
                                 contents=[
-                                    TextComponent(text='時間', size='sm', color='#555555', flex=1),
-                                    TextComponent(text=date, size='sm', color='#111111', align='end', flex=4)
+                                    TextComponent(text='⏰ 時間', size='xs', color='#AAAAAA', flex=1),
+                                    TextComponent(text=date, size='xs', color='#AAAAAA', align='end', flex=4)
                                 ]
                             )
                         ]
                     )
                 ]
+            ),
+            footer=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text='繼續保持唷！加油！🍰', size='xs', color='#FFB2B2', align='center', margin='md')
+                ]
             )
         )
-        return FlexSendMessage(alt_text=f"記帳成功: {category} {amount}元", contents=bubble)
+        return FlexSendMessage(alt_text=f"🌸 記帳成功囉！花了 {amount} 元", contents=bubble)
