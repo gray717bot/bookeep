@@ -45,7 +45,7 @@ def handle_text_message(event):
     
     # 優先嘗試處理系統指令
     if "摘要" in text or "總額" in text:
-        reply = gsheet.get_summary()
+        reply = gsheet.get_summary(user_id)
     else:
         # 使用 Gemini 解析文字
         record = gemini.parse_bookkeeping_content(text_content=text)
