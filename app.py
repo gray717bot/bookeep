@@ -4,7 +4,7 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage, 
-    AudioMessage, ImageMessage, DocumentMessage
+    AudioMessage, ImageMessage, FileMessage
 )
 import tempfile
 from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, FAMILY_USER_IDS
@@ -98,7 +98,7 @@ def handle_text_message(event):
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
 
-@handler.add(MessageEvent, message=(AudioMessage, ImageMessage, DocumentMessage))
+@handler.add(MessageEvent, message=(AudioMessage, ImageMessage, FileMessage))
 def handle_content_message(event):
     user_id = event.source.user_id
     message_content = line_bot_api.get_message_content(event.message.id)
@@ -110,7 +110,7 @@ def handle_content_message(event):
     elif isinstance(event.message, ImageMessage):
         ext = "jpg"
         mime_type = "image/jpeg"
-    elif isinstance(event.message, DocumentMessage):
+    elif isinstance(event.message, FileMessage):
         ext = event.message.file_name.split('.')[-1]
         mime_type = "application/pdf" if ext.lower() == 'pdf' else "application/octet-stream"
     else:
