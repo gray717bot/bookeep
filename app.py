@@ -7,6 +7,7 @@ from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN
 from gsheet_manager import GSheetManager
 from line_handler import LineHandler
 from gemini_manager import GeminiManager
+from config import FAMILY_USER_IDS
 import tempfile
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, AudioMessage, ImageMessage
 
@@ -44,6 +45,25 @@ def handle_text_message(event):
     text = event.message.text
     
     # 優先嘗試處理系統指令
+    if "查詢ID" in text or "my id" in text.lower():
+        reply = f"你的 LINE User ID 是：\n{user_id}\n\n(請將此 ID 提供給管理員以設定家庭共享)"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+
+    if any(keyword in text for keyword in ["全家", "全家報表", "家庭報表"]):
+        if not FAMILY_USER_IDS:
+            reply = "尚未設定家庭成員 ID。請在環境變數中設定 FAMILY_USER_IDS。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            return
+        
+        summary = gsheet.get_summary(FAMILY_USER_IDS, is_family=True)
+        if isinstance(summary, dict):
+            reply_message = LineHandler.get_summary_flex(summary)
+            line_bot_api.reply_message(event.reply_token, reply_message)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+        return
+
     if any(keyword in text for keyword in ["摘要", "總額", "報表", "本月"]):
         summary = gsheet.get_summary(user_id)
         if isinstance(summary, dict):

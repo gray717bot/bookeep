@@ -33,6 +33,7 @@ class LineHandler:
         """
         生成統計報表的 Flex Message
         """
+        title = summary_data.get('title', '消費月報')
         month = summary_data.get('month')
         total = summary_data.get('total')
         count = summary_data.get('count')
@@ -57,7 +58,7 @@ class LineHandler:
                 layout='vertical',
                 background_color='#1DB446',
                 contents=[
-                    TextComponent(text=f'📊 {month} 消費月報', weight='bold', size='lg', color='#ffffff', align='center')
+                    TextComponent(text=title, weight='bold', size='lg', color='#ffffff', align='center')
                 ]
             ),
             body=BoxComponent(
