@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
 
 class LineHandler:
