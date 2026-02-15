@@ -17,6 +17,10 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 gsheet = GSheetManager()
 gemini = GeminiManager()
 
+@app.route("/", methods=['GET'])
+def index():
+    return "Bookeep server is running! Please use /callback for LINE Webhook.", 200
+
 @app.route("/callback", methods=['POST'])
 def callback():
     # 獲取 X-Line-Signature 標頭值
