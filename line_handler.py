@@ -158,8 +158,12 @@ class LineHandler:
         note = record.get('note', '')
         date = record.get('date', datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
-        # 根據金額給予不同的小評價 (讓它更有趣)
-        comment = "省錢小達人！✨" if int(amount) < 100 else "花錢有理，記帳萬歲！🎈"
+        # 根據金額給予不同的小評價
+        try:
+            amt_val = float(amount)
+            comment = "省錢小達人！✨" if amt_val < 100 else "花錢有理，記帳萬歲！🎈"
+        except:
+            comment = "花錢有理，記帳萬歲！🎈"
 
         bubble = BubbleContainer(
             direction='ltr',
