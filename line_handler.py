@@ -29,6 +29,65 @@ class LineHandler:
             "note": note
         }
     @staticmethod
+    def get_summary_flex(summary_data):
+        """
+        生成統計報表的 Flex Message
+        """
+        month = summary_data.get('month')
+        total = summary_data.get('total')
+        count = summary_data.get('count')
+        cat_details = summary_data.get('category_details', {})
+
+        # 建立類別列表組件
+        cat_rows = []
+        for cat, amt in cat_details.items():
+            cat_rows.append(
+                BoxComponent(
+                    layout='horizontal',
+                    contents=[
+                        TextComponent(text=cat, size='sm', color='#555555', flex=1),
+                        TextComponent(text=f'{amt} 元', size='sm', color='#111111', align='end', flex=4)
+                    ]
+                )
+            )
+
+        bubble = BubbleContainer(
+            direction='ltr',
+            header=BoxComponent(
+                layout='vertical',
+                background_color='#1DB446',
+                contents=[
+                    TextComponent(text=f'📊 {month} 消費月報', weight='bold', size='lg', color='#ffffff', align='center')
+                ]
+            ),
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text='總支出金額', size='xs', color='#AAAAAA', align='center'),
+                    TextComponent(text=f'NT$ {total}', weight='bold', size='xxl', margin='md', align='center', color='#1DB446'),
+                    SeparatorComponent(margin='xl'),
+                    TextComponent(text='類別統計明細', size='sm', weight='bold', margin='lg', color='#555555'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='md',
+                        spacing='sm',
+                        contents=cat_rows
+                    ),
+                    SeparatorComponent(margin='xl'),
+                    BoxComponent(
+                        layout='horizontal',
+                        margin='md',
+                        contents=[
+                            TextComponent(text='總計筆數', size='xs', color='#AAAAAA', flex=1),
+                            TextComponent(text=f'{count} 筆', size='xs', color='#AAAAAA', align='end', flex=4)
+                        ]
+                    )
+                ]
+            )
+        )
+        return FlexSendMessage(alt_text=f"{month} 消費月報", contents=bubble)
+
+    @staticmethod
     def get_flex_message(record):
         """
         將記帳紀錄轉換為超可愛的 Flex Message

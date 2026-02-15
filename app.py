@@ -44,8 +44,14 @@ def handle_text_message(event):
     text = event.message.text
     
     # 優先嘗試處理系統指令
-    if "摘要" in text or "總額" in text:
-        reply = gsheet.get_summary(user_id)
+    if any(keyword in text for keyword in ["摘要", "總額", "報表", "本月"]):
+        summary = gsheet.get_summary(user_id)
+        if isinstance(summary, dict):
+            reply_message = LineHandler.get_summary_flex(summary)
+            line_bot_api.reply_message(event.reply_token, reply_message)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+        return
     else:
         # 使用 Gemini 解析文字
         record = gemini.parse_bookkeeping_content(text_content=text)

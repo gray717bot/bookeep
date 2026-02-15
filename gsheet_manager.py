@@ -35,8 +35,10 @@ class GSheetManager:
             print(f"Error adding record to Google Sheets: {e}")
             return False
 
-    def get_summary(self, user_id):
-        # Implementation for basic summary/report
+    def get_summary(self, user_id, month=None):
+        """
+        獲取摘要。如果指定 month (格式 YYYY-MM)，則只計算該月。
+        """
         if not self.client:
             return "Error: Could not connect to Google Sheets."
         
@@ -44,31 +46,44 @@ class GSheetManager:
             sheet = self.client.open_by_key(self.spreadsheet_id).sheet1
             records = sheet.get_all_records()
             
-            # 使用列表推導式篩選屬於該使用者的金額
-            # 假設試算表欄位名稱包含 'Amount' 和 'User ID' (或對應 index)
-            # 由於 append_row 使用 [date, category, amount, note, user_id]
-            # get_all_records 會將第一列視為 Header
-            
             user_total = 0
+            category_totals = {}
             count = 0
+            
+            # 如果沒指定月份，預設為本月
+            target_month = month if month else datetime.now().strftime("%Y-%m")
+
             for r in records:
-                # 這裡需要匹配你的試算表標頭名稱，如果是照我的程式碼產生的，標頭應該是：
-                # Date | Category | Amount | Note | User ID
-                # 我們用索引或名稱來抓取
                 r_user_id = r.get('User ID') or r.get('user_id')
                 r_amount = r.get('Amount') or r.get('amount')
+                r_date = r.get('Date') or r.get('date', '')
                 
-                if str(r_user_id) == str(user_id):
+                # 檢查使用者 ID 與月份
+                if str(r_user_id) == str(user_id) and r_date.startswith(target_month):
                     try:
-                        user_total += float(r_amount)
+                        amt = float(r_amount)
+                        user_total += amt
                         count += 1
+                        
+                        # 按類別統計
+                        cat = r.get('Category') or r.get('category') or '未分類'
+                        category_totals[cat] = category_totals.get(cat, 0) + amt
                     except (ValueError, TypeError):
                         continue
             
             if count == 0:
-                return "你目前還沒有任何記帳紀錄喔！"
-                
-            return f"💰 你目前的總支出共計：{user_total} 元（共 {count} 筆紀錄）"
+                return f"你目前在 {target_month} 還沒有任何記帳紀錄喔！"
+            
+            # 準備類別詳細資訊文字版 (或供 Flex 使用)
+            cat_details = "\n".join([f"• {k}: {v}元" for k, v in category_totals.items()])
+            
+            return {
+                "month": target_month,
+                "total": user_total,
+                "count": count,
+                "category_details": category_totals,
+                "text_summary": f"📊 {target_month} 報表：\n━━━━━━━━━━\n總支出：{user_total} 元\n筆數：{count} 筆\n\n類別明細：\n{cat_details}"
+            }
         except Exception as e:
             print(f"Error getting summary: {e}")
-            return "無法獲取摘要資料，請確認試算表格式是否正確。"
+            return "無法獲取摘要資料，請確認試算表格式。"
