@@ -47,7 +47,7 @@ def setup_rich_menu():
         data=json.dumps(rich_menu_data)
     )
     
-    if response.status_code != 201:
+    if response.status_code not in [200, 201]:
         print(f"建立失敗: {response.text}")
         return
 
