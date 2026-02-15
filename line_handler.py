@@ -29,6 +29,65 @@ class LineHandler:
             "note": note
         }
     @staticmethod
+    def get_batch_summary_flex(records):
+        """
+        生成批次記帳成功的彙總卡片
+        """
+        count = len(records)
+        total = sum(float(r.get('amount', 0)) for r in records)
+        
+        # 建立前 5 筆預覽
+        preview_rows = []
+        for r in records[:5]:
+            preview_rows.append(
+                BoxComponent(
+                    layout='horizontal',
+                    contents=[
+                        TextComponent(text=f"• {r.get('category')}", size='xs', color='#888888', flex=1),
+                        TextComponent(text=f"{r.get('amount')}元", size='xs', color='#555555', align='end', flex=2)
+                    ]
+                )
+            )
+        if count > 5:
+            preview_rows.append(TextComponent(text=f"...以及其他 {count-5} 筆交易", size='xxs', color='#AAAAAA', align='center', margin='sm'))
+
+        bubble = BubbleContainer(
+            direction='ltr',
+            header=BoxComponent(
+                layout='vertical',
+                background_color='#FFB2B2',
+                padding_all='20px',
+                contents=[
+                    TextComponent(text='📝 批次記帳成功 📝', weight='bold', size='md', color='#ffffff', align='center')
+                ]
+            ),
+            body=BoxComponent(
+                layout='vertical',
+                padding_all='20px',
+                contents=[
+                    TextComponent(text='總計匯入筆數', size='xs', color='#AAAAAA', align='center'),
+                    TextComponent(text=f'{count} 筆', weight='bold', size='xl', color='#FF6B6B', align='center', margin='xs'),
+                    TextComponent(text=f'總金額：NT$ {total}', size='sm', color='#FF8888', align='center', margin='xs'),
+                    SeparatorComponent(margin='xl', color='#FFEEEE'),
+                    TextComponent(text='資料預覽：', size='xs', weight='bold', margin='md', color='#888888'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='sm',
+                        spacing='xs',
+                        contents=preview_rows
+                    )
+                ]
+            ),
+            footer=BoxComponent(
+                layout='vertical',
+                contents=[
+                    TextComponent(text='已成功同步至 Google Sheets！✨', size='xxs', color='#FFB2B2', align='center', margin='md')
+                ]
+            )
+        )
+        return FlexSendMessage(alt_text=f"📝 批次記帳成功！共 {count} 筆", contents=bubble)
+
+    @staticmethod
     def get_summary_flex(summary_data):
         """
         生成統計報表的 Flex Message

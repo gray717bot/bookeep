@@ -35,6 +35,31 @@ class GSheetManager:
             print(f"Error adding record to Google Sheets: {e}")
             return False
 
+    def add_records(self, records, user_id):
+        """
+        批次新增多筆紀錄
+        records: [{'date', 'category', 'amount', 'note'}, ...]
+        """
+        if not self.client or not records:
+            return False
+            
+        try:
+            sheet = self.client.open_by_key(self.spreadsheet_id).sheet1
+            rows = []
+            for r in records:
+                rows.append([
+                    r.get('date'),
+                    r.get('category'),
+                    r.get('amount'),
+                    r.get('note'),
+                    user_id
+                ])
+            sheet.append_rows(rows)
+            return True
+        except Exception as e:
+            print(f"Error adding batch records to Google Sheets: {e}")
+            return False
+
     def get_summary(self, user_id_list, month=None, is_family=False):
         """
         獲取摘要。支持單一 ID 或 ID 列表。

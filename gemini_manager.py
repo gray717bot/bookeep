@@ -14,19 +14,30 @@ class GeminiManager:
     def parse_bookkeeping_content(self, content_path=None, text_content=None, mime_type=None):
         """
         使用 Gemini 解析記帳內容。
-        支援文字、圖片 (Receipts)、語音 (Voice notes)。
+        支援文字、圖片 (收據、帳單截圖)、語音。
         """
-        prompt = """
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        prompt = f"""
         你是一位專業的記帳助理。請從提供的內容中提取記帳資訊。
-        請務必以 JSON 格式回傳，包含以下欄位：
-        {
-            "category": "類別 (例如：晚餐, 交通, 購物...)",
-            "amount": 金額 (數字),
-            "note": "備註 (如果沒有則留空)",
-            "date": "YYYY-MM-DD HH:MM:SS (當前時間為: """ + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + """)"
-        }
-        如果是收據圖片，請抓取總金額。
-        如果是語音或文字，請從語句中提取。
+        
+        請注意：
+        1. 可能包含單筆收據，也可能包含多筆交易的「信用卡帳單截圖」。
+        2. 請務必以 JSON 格式回傳一個「列表書組」，包含多個交易物件。
+        3. 每個交易物件包含以下欄位：
+           {{
+               "category": "類別 (例如：晚餐, 交通, 購物...)",
+               "amount": 金額 (數字),
+               "note": "備註 (如果沒有則留空)",
+               "date": "YYYY-MM-DD (如果是帳單，請抓取帳單日期；若是單筆記帳且無日期，則使用當前時間 {current_time})"
+           }}
+        4. 如果是整張收據，請提取總金額。
+        5. 如果是信用卡帳單表格，請提取每一列的消費紀錄。
+        
+        回傳範例：
+        [
+          {{"category": "午餐", "amount": 150, "note": "麥當勞", "date": "2024-02-16"}},
+          {{"category": "交通", "amount": 500, "note": "加油", "date": "2024-02-15"}}
+        ]
         """
 
         contents = [prompt]
@@ -44,13 +55,21 @@ class GeminiManager:
 
         try:
             response = self.model.generate_content(contents)
-            # 提取 JSON 部分
             text_response = response.text
-            json_str = text_response.split('```json')[1].split('```')[0].strip() if '```json' in text_response else text_response
-            return json.loads(json_str)
+            # 提取 JSON 列表
+            if '```json' in text_response:
+                json_str = text_response.split('```json')[1].split('```')[0].strip()
+            else:
+                json_str = text_response.strip()
+            
+            result = json.loads(json_str)
+            # 確保回傳一定是列表
+            if isinstance(result, dict):
+                return [result]
+            return result
         except Exception as e:
             print(f"Gemini Parsing Error: {e}")
-            return None
+            return []
 
 if __name__ == "__main__":
     # 簡單測試合法性

@@ -9,7 +9,7 @@ from line_handler import LineHandler
 from gemini_manager import GeminiManager
 from config import FAMILY_USER_IDS
 import tempfile
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, AudioMessage, ImageMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, AudioMessage, ImageMessage, DocumentMessage
 
 app = Flask(__name__)
 
@@ -45,6 +45,11 @@ def handle_text_message(event):
     text = event.message.text
     
     # 優先嘗試處理系統指令
+    if "使用教學" in text:
+        reply = "🌸 Bookeep 使用小撇步：\n1. 直接打字「早餐 100」\n2. 對我說話「今天吃大餐花了一千」\n3. 拍收據或上傳帳單 PDF\n4. 點下方選單看「報表」唷！"
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        return
+
     if "查詢ID" in text or "my id" in text.lower():
         reply = f"你的 LINE User ID 是：\n{user_id}\n\n(請將此 ID 提供給管理員以設定家庭共享)"
         line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
@@ -74,19 +79,15 @@ def handle_text_message(event):
         return
     else:
         # 使用 Gemini 解析文字
-        record = gemini.parse_bookkeeping_content(text_content=text)
+        records = gemini.parse_bookkeeping_content(text_content=text)
         
-        if record and record.get('amount'):
-            success = gsheet.add_record(
-                record['date'],
-                record['category'],
-                record['amount'],
-                record['note'],
-                user_id
-            )
+        if records:
+            success = gsheet.add_records(records, user_id)
             if success:
-                # 使用 Flex Message 回覆
-                reply_message = LineHandler.get_flex_message(record)
+                if len(records) > 1:
+                    reply_message = LineHandler.get_batch_summary_flex(records)
+                else:
+                    reply_message = LineHandler.get_flex_message(records[0])
                 line_bot_api.reply_message(event.reply_token, reply_message)
                 return
             else:
@@ -96,18 +97,23 @@ def handle_text_message(event):
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
 
-@handler.add(MessageEvent, message=(AudioMessage, ImageMessage))
+@handler.add(MessageEvent, message=(AudioMessage, ImageMessage, DocumentMessage))
 def handle_content_message(event):
     user_id = event.source.user_id
     message_content = line_bot_api.get_message_content(event.message.id)
     
-    # 決定 MIME 類型
+    # 決定副檔名與 MIME 類型
     if isinstance(event.message, AudioMessage):
         ext = "m4a"
         mime_type = "audio/x-m4a"
-    else:
+    elif isinstance(event.message, ImageMessage):
         ext = "jpg"
         mime_type = "image/jpeg"
+    elif isinstance(event.message, DocumentMessage):
+        ext = event.message.file_name.split('.')[-1]
+        mime_type = "application/pdf" if ext.lower() == 'pdf' else "application/octet-stream"
+    else:
+        return
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=f".{ext}") as tf:
         for chunk in message_content.iter_content():
@@ -115,29 +121,25 @@ def handle_content_message(event):
         temp_path = tf.name
 
     # 使用 Gemini 解析多媒體內容
-    record = gemini.parse_bookkeeping_content(content_path=temp_path, mime_type=mime_type)
+    records = gemini.parse_bookkeeping_content(content_path=temp_path, mime_type=mime_type)
     
     # 刪除暫存檔
     if os.path.exists(temp_path):
         os.remove(temp_path)
 
-    if record and record.get('amount'):
-        success = gsheet.add_record(
-            record['date'],
-            record['category'],
-            record['amount'],
-            record['note'],
-            user_id
-        )
+    if records:
+        success = gsheet.add_records(records, user_id)
         if success:
-            # 使用 Flex Message 回覆
-            reply_message = LineHandler.get_flex_message(record)
+            if len(records) > 1:
+                reply_message = LineHandler.get_batch_summary_flex(records)
+            else:
+                reply_message = LineHandler.get_flex_message(records[0])
             line_bot_api.reply_message(event.reply_token, reply_message)
             return
         else:
             reply = "❌ 辨識成功但記錄失敗。"
     else:
-        reply = "抱歉，我無法從這段語音或照片中提取記帳資訊。"
+        reply = "抱歉，我無法從這段內容中提取記帳資訊。"
 
     line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
 
