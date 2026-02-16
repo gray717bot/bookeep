@@ -87,10 +87,26 @@ class GSheetManager:
             
             target_month = month if month else datetime.now().strftime("%Y-%m")
 
+            # 定義可能的欄位名稱清單
+            id_keys = ['User ID', 'user_id', '使用者ID', '使用者 ID', 'UserID']
+            amount_keys = ['Amount', 'amount', '金額', '消費']
+            date_keys = ['Date', 'date', '日期', '時間']
+            category_keys = ['Category', 'category', '類別', '項目']
+
+            def get_value(row_dict, keys, default_idx):
+                for k in keys:
+                    if k in row_dict:
+                        return row_dict[k]
+                # 如果都找不到，嘗試根據順序猜測 (Date=0, Cat=1, Amt=2, Note=3, ID=4)
+                vals = list(row_dict.values())
+                if len(vals) > default_idx:
+                    return vals[default_idx]
+                return None
+
             for r in records:
-                r_user_id = str(r.get('User ID') or r.get('user_id'))
-                r_amount = r.get('Amount') or r.get('amount')
-                r_date = r.get('Date') or r.get('date', '')
+                r_user_id = str(get_value(r, id_keys, 4) or "")
+                r_amount = get_value(r, amount_keys, 2)
+                r_date = str(get_value(r, date_keys, 0) or "")
                 
                 # 檢查 User ID 是否在清單中
                 if r_user_id in id_list and r_date.startswith(target_month):
