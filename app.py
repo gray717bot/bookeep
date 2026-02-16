@@ -1,4 +1,4 @@
-import os
+import logging
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
@@ -7,12 +7,15 @@ from linebot.models import (
     AudioMessage, ImageMessage, FileMessage
 )
 import tempfile
+import traceback
 from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, FAMILY_USER_IDS
 from gsheet_manager import GSheetManager
 from line_handler import LineHandler
 from gemini_manager import GeminiManager
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = app.logger
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
@@ -22,6 +25,12 @@ gemini = GeminiManager()
 @app.route("/", methods=['GET'])
 def index():
     return "Bookeep server is running! Please use /callback for LINE Webhook.", 200
+
+@app.errorhandler(Exception)
+def handle_error(e):
+    logger.error(f"!!! Unhandled Exception: {str(e)}")
+    logger.error(traceback.format_exc())
+    return "Internal Server Error", 500
 
 @app.route("/callback", methods=['POST'])
 def callback():
