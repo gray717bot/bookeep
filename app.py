@@ -85,6 +85,29 @@ def handle_text_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
         return
 
+    if any(keyword in text for keyword in ["詳細報表", "明細"]):
+        summary = gsheet.get_summary(user_id)
+        if isinstance(summary, dict):
+            reply_message = LineHandler.get_detailed_list_flex(summary)
+            line_bot_api.reply_message(event.reply_token, reply_message)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+        return
+
+    if any(keyword in text for keyword in ["家庭明細", "全家明細"]):
+        if not FAMILY_USER_IDS:
+            reply = "尚未設定家庭成員 ID。"
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+            return
+        
+        summary = gsheet.get_summary(FAMILY_USER_IDS, is_family=True)
+        if isinstance(summary, dict):
+            reply_message = LineHandler.get_detailed_list_flex(summary)
+            line_bot_api.reply_message(event.reply_token, reply_message)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+        return
+
     if any(keyword in text for keyword in ["摘要", "總額", "報表", "本月"]):
         summary = gsheet.get_summary(user_id)
         if isinstance(summary, dict):

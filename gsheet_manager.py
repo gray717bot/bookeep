@@ -2,6 +2,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import os
 from datetime import datetime
+from config import MONTHLY_BUDGET
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -84,6 +85,7 @@ class GSheetManager:
             total = 0
             category_totals = {}
             count = 0
+            items = []  # 新增：儲存所有交易細目
             
             target_month = month if month else datetime.now().strftime("%Y-%m")
 
@@ -118,6 +120,14 @@ class GSheetManager:
                         # 按類別統計
                         cat = str(get_value(r, category_keys, 1) or '未分類')
                         category_totals[cat] = category_totals.get(cat, 0) + amt
+
+                        # 儲存明細
+                        items.append({
+                            "date": r_date,
+                            "category": cat,
+                            "amount": amt,
+                            "note": str(get_value(r, ['Note', 'note', '備註', '說明'], 3) or "")
+                        })
                     except (ValueError, TypeError):
                         continue
             
@@ -133,7 +143,10 @@ class GSheetManager:
                 "total": total,
                 "count": count,
                 "category_details": category_totals,
-                "text_summary": f"📊 {title}：\n━━━━━━━━━━\n總支出：{total} 元\n筆數：{count} 筆\n\n類別明細：\n{cat_details}"
+                "items": items,
+                "budget": MONTHLY_BUDGET,
+                "remaining": MONTHLY_BUDGET - total,
+                "text_summary": f"📊 {title}：\n━━━━━━━━━━\n預算：{MONTHLY_BUDGET}\n總支出：{total} 元\n剩餘：{MONTHLY_BUDGET - total} 元\n筆數：{count} 筆\n\n類別明細：\n{cat_details}"
             }
         except Exception as e:
             print(f"Error getting summary: {e}")

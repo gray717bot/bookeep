@@ -1,6 +1,10 @@
 from datetime import datetime
 import re
-from linebot.models import FlexSendMessage, BubbleContainer, BoxComponent, TextComponent, ButtonComponent, SeparatorComponent
+from linebot.models import (
+    FlexSendMessage, BubbleContainer, BoxComponent, 
+    TextComponent, ButtonComponent, SeparatorComponent, 
+    MessageAction
+)
 
 class LineHandler:
     @staticmethod
@@ -126,6 +130,40 @@ class LineHandler:
                 contents=[
                     TextComponent(text='總支出金額', size='xs', color='#AAAAAA', align='center'),
                     TextComponent(text=f'NT$ {total}', weight='bold', size='xxl', margin='md', align='center', color='#1DB446'),
+                    
+                    # 預算進度條
+                    BoxComponent(
+                        layout='vertical',
+                        margin='lg',
+                        contents=[
+                            BoxComponent(
+                                layout='horizontal',
+                                contents=[
+                                    TextComponent(text='預算進度', size='xs', color='#888888', flex=1),
+                                    TextComponent(text=f'{int((total/summary_data.get("budget", 1))*100)}%', size='xs', color='#888888', align='end', flex=1)
+                                ]
+                            ),
+                            BoxComponent(
+                                layout='vertical',
+                                margin='sm',
+                                background_color='#EEEEEE',
+                                height='6px',
+                                border_radius='3px',
+                                contents=[
+                                    BoxComponent(
+                                        layout='vertical',
+                                        width=f'{min(100, int((total/summary_data.get("budget", 1))*100))}%',
+                                        background_color='#1DB446' if total <= summary_data.get('budget', 0) else '#FF6B6B',
+                                        height='6px',
+                                        border_radius='3px',
+                                        contents=[]
+                                    )
+                                ]
+                            ),
+                            TextComponent(text=f'剩餘：NT$ {summary_data.get("remaining")}', size='xxs', color='#AAAAAA', margin='xs', align='end')
+                        ]
+                    ),
+
                     SeparatorComponent(margin='xl'),
                     TextComponent(text='類別統計明細', size='sm', weight='bold', margin='lg', color='#555555'),
                     BoxComponent(
@@ -144,9 +182,83 @@ class LineHandler:
                         ]
                     )
                 ]
+            ),
+            footer=BoxComponent(
+                layout='vertical',
+                contents=[
+                    SeparatorComponent(margin='md'),
+                    ButtonComponent(
+                        action=MessageAction(
+                            label='查看詳細明細' if '家庭' not in title else '查看全家明細', 
+                            text='詳細報表' if '家庭' not in title else '家庭明細'
+                        ),
+                        style='link',
+                        color='#1DB446',
+                        height='sm'
+                    )
+                ]
             )
         )
         return FlexSendMessage(alt_text=f"{month} 消費月報", contents=bubble)
+
+    @staticmethod
+    def get_detailed_list_flex(summary_data):
+        """
+        生成詳細交易清單的 Flex Message
+        """
+        title = summary_data.get('title', '消費細目')
+        items = summary_data.get('items', [])
+        
+        # 只顯示最近的 20 筆，避免 Flex 內容過長
+        display_items = items[-20:]
+        
+        item_rows = []
+        for it in display_items:
+            # 格式化日期只取日
+            short_date = it.get('date', '').split(' ')[0].split('-')[-1] + "日"
+            item_rows.append(
+                BoxComponent(
+                    layout='horizontal',
+                    margin='sm',
+                    contents=[
+                        TextComponent(text=short_date, size='xs', color='#AAAAAA', flex=1),
+                        TextComponent(text=it.get('category'), size='sm', color='#555555', flex=2),
+                        TextComponent(text=f"{it.get('amount')}元", size='sm', color='#111111', align='end', flex=2)
+                    ]
+                )
+            )
+
+        bubble = BubbleContainer(
+            direction='ltr',
+            header=BoxComponent(
+                layout='vertical',
+                background_color='#1DB446',
+                contents=[
+                    TextComponent(text=f"📋 {title} (最近20筆)", weight='bold', size='md', color='#ffffff', align='center')
+                ]
+            ),
+            body=BoxComponent(
+                layout='vertical',
+                contents=[
+                    BoxComponent(
+                        layout='horizontal',
+                        contents=[
+                            TextComponent(text='編號', size='xs', color='#AAAAAA', flex=1),
+                            TextComponent(text='項目', size='xs', color='#AAAAAA', flex=2),
+                            TextComponent(text='金額', size='xs', color='#AAAAAA', align='end', flex=2)
+                        ]
+                    ),
+                    SeparatorComponent(margin='sm'),
+                    BoxComponent(
+                        layout='vertical',
+                        margin='md',
+                        spacing='sm',
+                        contents=item_rows
+                    )
+                ]
+            )
+        )
+        return FlexSendMessage(alt_text="詳細交易清單", contents=bubble)
 
     @staticmethod
     def get_flex_message(record):

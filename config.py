@@ -10,3 +10,4 @@ GOOGLE_SERVICE_ACCOUNT_FILE = os.getenv('GOOGLE_SERVICE_ACCOUNT_FILE', 'service_
 PORT = int(os.getenv('PORT', 8080))
 FAMILY_USER_IDS = os.getenv('FAMILY_USER_IDS', '').split(',')
 FAMILY_USER_IDS = [f.strip() for f in FAMILY_USER_IDS if f.strip()]
+MONTHLY_BUDGET = float(os.getenv('MONTHLY_BUDGET', '5000'))
