@@ -12,6 +12,9 @@ from config import LINE_CHANNEL_SECRET, LINE_CHANNEL_ACCESS_TOKEN, FAMILY_USER_I
 from gsheet_manager import GSheetManager
 from line_handler import LineHandler
 from gemini_manager import GeminiManager
+from prize_manager import prize_manager
+from flask_apscheduler import APScheduler
+import os
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +24,7 @@ line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 gsheet = GSheetManager()
 gemini = GeminiManager()
+scheduler = APScheduler()
 
 @app.route("/", methods=['GET'])
 def index():
@@ -31,6 +35,44 @@ def test_env():
     # 用於檢查環境變數是否正確讀入 (隱藏密鑰)
     sheets_id = os.getenv('GOOGLE_SHEETS_ID', 'Not Set')
     return f"Sheets ID set: {sheets_id[:5]}...", 200
+
+#背景自動對獎任務
+def auto_check_prizes():
+    logger.info("⏰ Starting scheduled prize check...")
+    try:
+        # 1. 抓取最新開獎號碼
+        prize_manager.fetch_winning_numbers()
+        
+        # 2. 獲取試算表所有資料
+        sheet = gsheet.client.open_by_key(gsheet.spreadsheet_id).sheet1
+        records = sheet.get_all_records()
+        
+        notified_count = 0
+        for i, r in enumerate(records):
+            # 取得發票號碼、日期、使用者 ID
+            # 注意：欄位順序可能是 Date, Cat, Amt, Note, User ID, Invoice Number
+            invoice_num = str(gsheet._get_val_by_idx(r, 5) or "").strip()
+            user_id = str(gsheet._get_val_by_idx(r, 4) or "").strip()
+            date = str(gsheet._get_val_by_idx(r, 0) or "").strip()
+            
+            if len(invoice_num) == 8 and user_id:
+                is_winner, msg = prize_manager.check_prize(invoice_num, invoice_date=date)
+                
+                # 如果中獎，且訊息中沒有「尚未開獎」字眼
+                if is_winner and "尚未開獎" not in msg:
+                    push_msg = f"🎊 【中獎喜報回傳】 🎊\n━━━━━━━━━━\n你於 {date} 記錄的發票中獎囉！\n\n發票號碼：{invoice_num}\n獎項：{msg}\n\n趕快去領獎吧！🌸💰"
+                    line_bot_api.push_message(user_id, TextSendMessage(text=push_msg))
+                    notified_count += 1
+                    logger.info(f"✅ Notified user {user_id} of a win!")
+                    
+        logger.info(f"🏁 Scheduled check finished. Notified {notified_count} wins.")
+    except Exception as e:
+        logger.error(f"❌ Auto Prize Check Error: {e}")
+
+# 初始化並啟動排程 (每天凌晨 2:00 執行)
+scheduler.init_app(app)
+scheduler.add_job(id='prize_check_job', func=auto_check_prizes, trigger='cron', hour=2, minute=0)
+scheduler.start()
 
 @app.errorhandler(Exception)
 def handle_error(e):

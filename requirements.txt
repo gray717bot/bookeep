@@ -7,3 +7,4 @@ google-generativeai
 gunicorn
 requests
 beautifulsoup4
+flask-apscheduler

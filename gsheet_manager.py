@@ -25,13 +25,13 @@ class GSheetManager:
             print(f"Error authenticating with Google Sheets: {e}")
             return None
 
-    def add_record(self, date, category, amount, note, user_id):
+    def add_record(self, date, category, amount, note, user_id, invoice_number=""):
         if not self.client:
             return False
         
         try:
             sheet = self.client.open_by_key(self.spreadsheet_id).sheet1
-            sheet.append_row([date, category, amount, note, user_id])
+            sheet.append_row([date, category, amount, note, user_id, invoice_number])
             return True
         except Exception as e:
             print(f"Error adding record to Google Sheets: {e}")
@@ -40,7 +40,7 @@ class GSheetManager:
     def add_records(self, records, user_id):
         """
         批次新增多筆紀錄
-        records: [{'date', 'category', 'amount', 'note'}, ...]
+        records: [{'date', 'category', 'amount', 'note', 'invoice_number'}, ...]
         """
         if not self.client or not records:
             return False
@@ -54,7 +54,8 @@ class GSheetManager:
                     r.get('category'),
                     r.get('amount'),
                     r.get('note'),
-                    user_id
+                    user_id,
+                    r.get('invoice_number', "")
                 ])
             sheet.append_rows(rows)
             return True
@@ -104,6 +105,11 @@ class GSheetManager:
                 if len(vals) > default_idx:
                     return vals[default_idx]
                 return None
+
+            def _get_val_by_idx(row_dict, idx):
+                vals = list(row_dict.values())
+                return vals[idx] if len(vals) > idx else None
+            self._get_val_by_idx = _get_val_by_idx # 導出給外部使用
 
             for r in records:
                 r_user_id = str(get_value(r, id_keys, 4) or "")
