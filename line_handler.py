@@ -1,5 +1,6 @@
 from datetime import datetime
 import re
+from prize_manager import prize_manager
 from linebot.models import (
     FlexSendMessage, BubbleContainer, BoxComponent, 
     TextComponent, ButtonComponent, SeparatorComponent, 
@@ -284,11 +285,86 @@ class LineHandler:
         except:
             comment = "花錢有理，記帳萬歲！🎈"
 
+        # 發票對獎邏輯
+        invoice_number = record.get('invoice_number', '')
+        prize_text = ""
+        prize_color = "#AAAAAA"
+        if invoice_number and len(invoice_number) == 8:
+            is_winner, msg = prize_manager.check_prize(invoice_number)
+            prize_text = f"🎫 發票號碼：{invoice_number}\n{msg}"
+            if is_winner:
+                prize_color = "#FF6B6B"
+        elif invoice_number:
+             prize_text = f"🎫 發票辨識：{invoice_number} (號碼異常)"
+
+        bubble_contents = [
+            # 大大圓圓的金額顯示
+            BoxComponent(
+                layout='vertical',
+                background_color='#FFF0F0',
+                border_radius='20px',
+                padding_all='15px',
+                contents=[
+                    TextComponent(text=f'NT$ {amount}', weight='bold', size='xxl', color='#FF6B6B', align='center'),
+                    TextComponent(text=comment, size='xs', color='#FFAAAA', align='center', margin='sm')
+                ]
+            )
+        ]
+
+        if prize_text:
+            bubble_contents.append(
+                BoxComponent(
+                    layout='vertical',
+                    margin='md',
+                    background_color='#FDFDFD',
+                    padding_all='10px',
+                    border_width='1px',
+                    border_color='#EEEEEE',
+                    border_radius='md',
+                    contents=[
+                        TextComponent(text=prize_text, size='xs', color=prize_color, wrap=True, align='center')
+                    ]
+                )
+            )
+
+        bubble_contents.append(
+            BoxComponent(
+                layout='vertical',
+                margin='xl',
+                spacing='md',
+                contents=[
+                    BoxComponent(
+                        layout='horizontal',
+                        contents=[
+                            TextComponent(text='🐾 類別', size='sm', color='#888888', flex=1),
+                            TextComponent(text=category, size='sm', color='#555555', align='end', flex=4, weight='bold')
+                        ]
+                    ),
+                    BoxComponent(
+                        layout='horizontal',
+                        contents=[
+                            TextComponent(text='📝 備註', size='sm', color='#888888', flex=1),
+                            TextComponent(text=note if note else '無', size='sm', color='#555555', align='end', flex=4)
+                        ]
+                    ),
+                    SeparatorComponent(margin='md', color='#FFEEEE'),
+                    BoxComponent(
+                        layout='horizontal',
+                        margin='md',
+                        contents=[
+                            TextComponent(text='⏰ 時間', size='xs', color='#AAAAAA', flex=1),
+                            TextComponent(text=date, size='xs', color='#AAAAAA', align='end', flex=4)
+                        ]
+                    )
+                ]
+            )
+        )
+
         bubble = BubbleContainer(
             direction='ltr',
             header=BoxComponent(
                 layout='vertical',
-                background_color='#FFB2B2',  # 奶油粉紅色
+                background_color='#FFB2B2',
                 padding_all='20px',
                 contents=[
                     TextComponent(text='🌸 記帳漂亮成功 🌸', weight='bold', size='md', color='#ffffff', align='center')
@@ -297,49 +373,7 @@ class LineHandler:
             body=BoxComponent(
                 layout='vertical',
                 padding_all='20px',
-                contents=[
-                    # 大大圓圓的金額顯示
-                    BoxComponent(
-                        layout='vertical',
-                        background_color='#FFF0F0',
-                        border_radius='20px',
-                        padding_all='15px',
-                        contents=[
-                            TextComponent(text=f'NT$ {amount}', weight='bold', size='xxl', color='#FF6B6B', align='center'),
-                            TextComponent(text=comment, size='xs', color='#FFAAAA', align='center', margin='sm')
-                        ]
-                    ),
-                    BoxComponent(
-                        layout='vertical',
-                        margin='xl',
-                        spacing='md',
-                        contents=[
-                            BoxComponent(
-                                layout='horizontal',
-                                contents=[
-                                    TextComponent(text='🐾 類別', size='sm', color='#888888', flex=1),
-                                    TextComponent(text=category, size='sm', color='#555555', align='end', flex=4, weight='bold')
-                                ]
-                            ),
-                            BoxComponent(
-                                layout='horizontal',
-                                contents=[
-                                    TextComponent(text='📝 備註', size='sm', color='#888888', flex=1),
-                                    TextComponent(text=note if note else '無', size='sm', color='#555555', align='end', flex=4)
-                                ]
-                            ),
-                            SeparatorComponent(margin='md', color='#FFEEEE'),
-                            BoxComponent(
-                                layout='horizontal',
-                                margin='md',
-                                contents=[
-                                    TextComponent(text='⏰ 時間', size='xs', color='#AAAAAA', flex=1),
-                                    TextComponent(text=date, size='xs', color='#AAAAAA', align='end', flex=4)
-                                ]
-                            )
-                        ]
-                    )
-                ]
+                contents=bubble_contents
             ),
             footer=BoxComponent(
                 layout='vertical',
