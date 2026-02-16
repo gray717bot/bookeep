@@ -85,6 +85,16 @@ def handle_text_message(event):
             line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
         return
 
+    if text.startswith("類別細目:"):
+        target_cat = text.replace("類別細目:", "").strip()
+        summary = gsheet.get_summary(user_id)
+        if isinstance(summary, dict):
+            reply_message = LineHandler.get_detailed_list_flex(summary, filter_category=target_cat)
+            line_bot_api.reply_message(event.reply_token, reply_message)
+        else:
+            line_bot_api.reply_message(event.reply_token, TextSendMessage(text=summary))
+        return
+
     if any(keyword in text for keyword in ["詳細報表", "明細"]):
         summary = gsheet.get_summary(user_id)
         if isinstance(summary, dict):

@@ -103,16 +103,16 @@ class LineHandler:
         count = summary_data.get('count')
         cat_details = summary_data.get('category_details', {})
 
-        # 建立類別列表組件
+        # 建立類別按鈕列表
         cat_rows = []
         for cat, amt in cat_details.items():
             cat_rows.append(
-                BoxComponent(
-                    layout='horizontal',
-                    contents=[
-                        TextComponent(text=cat, size='sm', color='#555555', flex=1),
-                        TextComponent(text=f'{amt} 元', size='sm', color='#111111', align='end', flex=4)
-                    ]
+                ButtonComponent(
+                    action=MessageAction(label=f"{cat}: {amt} 元", text=f"類別細目:{cat}"),
+                    style='secondary',
+                    color='#F0F0F0',
+                    margin='xs',
+                    height='sm'
                 )
             )
 
@@ -165,11 +165,11 @@ class LineHandler:
                     ),
 
                     SeparatorComponent(margin='xl'),
-                    TextComponent(text='類別統計明細', size='sm', weight='bold', margin='lg', color='#555555'),
+                    TextComponent(text='類別統計 (點擊看明細)', size='sm', weight='bold', margin='lg', color='#555555'),
                     BoxComponent(
                         layout='vertical',
                         margin='md',
-                        spacing='sm',
+                        spacing='xs',
                         contents=cat_rows
                     ),
                     SeparatorComponent(margin='xl'),
@@ -202,14 +202,21 @@ class LineHandler:
         return FlexSendMessage(alt_text=f"{month} 消費月報", contents=bubble)
 
     @staticmethod
-    def get_detailed_list_flex(summary_data):
+    def get_detailed_list_flex(summary_data, filter_category=None):
         """
-        生成詳細交易清單的 Flex Message
+        生成交易清單，支援選用特定類別篩選
         """
         title = summary_data.get('title', '消費細目')
         items = summary_data.get('items', [])
         
-        # 只顯示最近的 20 筆，避免 Flex 內容過長
+        # 篩選類別
+        if filter_category:
+            items = [it for it in items if it.get('category') == filter_category]
+            display_title = f"{filter_category} 支出細目"
+        else:
+            display_title = title
+
+        # 只顯示最近的 20 筆
         display_items = items[-20:]
         
         item_rows = []
@@ -234,7 +241,7 @@ class LineHandler:
                 layout='vertical',
                 background_color='#1DB446',
                 contents=[
-                    TextComponent(text=f"📋 {title} (最近20筆)", weight='bold', size='md', color='#ffffff', align='center')
+                    TextComponent(text=f"📋 {display_title}", weight='bold', size='md', color='#ffffff', align='center')
                 ]
             ),
             body=BoxComponent(
