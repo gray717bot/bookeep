@@ -24,7 +24,13 @@ gemini = GeminiManager()
 
 @app.route("/", methods=['GET'])
 def index():
-    return "Bookeep server is running! Please use /callback for LINE Webhook.", 200
+    return "Bookeep server is running! Version: 2.1.0", 200
+
+@app.route("/test_env", methods=['GET'])
+def test_env():
+    # 用於檢查環境變數是否正確讀入 (隱藏密鑰)
+    sheets_id = os.getenv('GOOGLE_SHEETS_ID', 'Not Set')
+    return f"Sheets ID set: {sheets_id[:5]}...", 200
 
 @app.errorhandler(Exception)
 def handle_error(e):

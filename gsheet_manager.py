@@ -78,6 +78,9 @@ class GSheetManager:
             sheet = self.client.open_by_key(self.spreadsheet_id).sheet1
             records = sheet.get_all_records()
             
+            if not records:
+                return f"你目前在 {target_month} 還沒有任何記帳紀錄喔！"
+                
             total = 0
             category_totals = {}
             count = 0
