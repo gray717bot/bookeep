@@ -69,9 +69,9 @@ def auto_check_prizes():
     except Exception as e:
         logger.error(f"❌ Auto Prize Check Error: {e}")
 
-# 初始化並啟動排程 (每天凌晨 2:00 執行)
+# 初始化並啟動排程 (單數月 25-27 號下午 4:00 執行，避開半夜與提早檢查)
 scheduler.init_app(app)
-scheduler.add_job(id='prize_check_job', func=auto_check_prizes, trigger='cron', hour=2, minute=0)
+scheduler.add_job(id='prize_check_job', func=auto_check_prizes, trigger='cron', month='1,3,5,7,9,11', day='25-27', hour=16, minute=0)
 scheduler.start()
 
 @app.errorhandler(Exception)
