@@ -116,7 +116,7 @@ class GSheetManager:
                         count += 1
                         
                         # 按類別統計
-                        cat = r.get('Category') or r.get('category') or '未分類'
+                        cat = str(get_value(r, category_keys, 1) or '未分類')
                         category_totals[cat] = category_totals.get(cat, 0) + amt
                     except (ValueError, TypeError):
                         continue
