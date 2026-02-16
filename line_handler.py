@@ -290,7 +290,7 @@ class LineHandler:
         prize_text = ""
         prize_color = "#AAAAAA"
         if invoice_number and len(invoice_number) == 8:
-            is_winner, msg = prize_manager.check_prize(invoice_number)
+            is_winner, msg = prize_manager.check_prize(invoice_number, invoice_date=date)
             prize_text = f"🎫 發票號碼：{invoice_number}\n{msg}"
             if is_winner:
                 prize_color = "#FF6B6B"
